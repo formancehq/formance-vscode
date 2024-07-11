@@ -34,7 +34,7 @@
     ],
     "commands": [
       {
-        "command": "numscript.restart-server",
+        "command": "numscript.restartServer",
         "title": "Restart server",
         "category": "Numscript"
       },

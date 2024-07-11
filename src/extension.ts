@@ -46,6 +46,30 @@ export function activate(context: vscode.ExtensionContext) {
     'Congratulations, your extension "numscript-prototype-vscode" is now active!'
   );
 
+  // Copied from:
+  // https://github.com/gleam-lang/vscode-gleam/blob/1a8cac7103f85e3e4e309190bb4d43ac1483cef9/src/extension.ts#L23
+  const restartCommand = vscode.commands.registerCommand(
+    RESTART_SERVER_COMMAND,
+    async () => {
+      if (!client) {
+        vscode.window.showErrorMessage("numscript client not found");
+        return;
+      }
+
+      try {
+        if (client.isRunning()) {
+          await client.restart();
+
+          vscode.window.showInformationMessage("numscript server restarted.");
+        } else {
+          await client.start();
+        }
+      } catch (err) {
+        client.error("Restarting client failed", err, "force");
+      }
+    }
+  );
+
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
