@@ -1,7 +1,114 @@
 {
-    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-    "name": "Numscript",
-    "patterns": [],
-    "repository": {},
-    "scopeName": "source.numscript"
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Numscript",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#constant"
+    },
+    {
+      "include": "#entity"
+    }
+  ],
+  "repository": {
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.numscript",
+          "match": "\\b(vars|send|source|destination|to|from|max|remaining)\\b"
+        },
+        {
+          "name": "keyword.other",
+          "match": "\\b(allowing|unbounded|overdraft|kept)\\b"
+        },
+        {
+          "name": "keyword.operator.arithmetic.numscript",
+          "match": "(\\+|\\-|/|\\*|%)"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.numscript",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.numscript",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.numscript",
+          "match": "//.*"
+        }
+      ]
+    },
+    "constant": {
+      "patterns": [
+        {
+          "include": "#percentage_ratio"
+        },
+        {
+          "include": "#ratio"
+        },
+        {
+          "include": "#decimal_number"
+        },
+        {
+          "include": "#boolean"
+        },
+        {
+          "name": "entity.name.type.numscript",
+          "match": "[[:upper:]][[:word:]]*"
+        }
+      ]
+    },
+    "percentage_ratio": {
+      "name": "constant.numeric.percentage.numscript",
+      "match": "([[:digit:]]+)(%)",
+      "patterns": []
+    },
+    "ratio": {
+      "name": "constant.numeric.ratio.numscript",
+      "match": "\\b[[:digit:]][[:digit:]_]*(/[[:digit:]]*)?\\b",
+      "patterns": []
+    },
+    "decimal_number": {
+      "name": "constant.numeric.decimal.numscript",
+      "match": "\\b[[:digit:]][[:digit:]_]*(\\.[[:digit:]]*)?\\b",
+      "patterns": []
+    },
+    "entity": {
+      "patterns": [
+        {
+          "name": "variable.other.numscript",
+          "match": "(\\$)[[:lower:]][[:word:]]*"
+        },
+        {
+          "name": "entity.name.namespace.numscript",
+          "match": "(@)[[:word:]]*(:[[:word:]]*)?"
+        },
+        {
+          "name": "comment.unused.numscript",
+          "match": "\\b\\@([\\w]+)"
+        },
+        {
+          "match": "\\b_\\b",
+          "name": "comment.wildcard.numscript"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.numscript"
 }

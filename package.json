@@ -29,7 +29,7 @@
       {
         "language": "numscript",
         "scopeName": "source.numscript",
-        "path": "./numscript.tmLanguage.json"
+        "path": "./numscript.tmLanguages.json"
       }
     ],
     "commands": [
