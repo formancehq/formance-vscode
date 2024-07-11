@@ -1,0 +1,71 @@
+{
+  "name": "numscript-prototype-vscode",
+  "displayName": "numscript-prototype-vscode",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "numscript",
+        "aliases": [
+          "Numscript",
+          "numscript"
+        ],
+        "extensions": [
+          ".num"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "numscript",
+        "scopeName": "source.numscript",
+        "path": "./numscript.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "numscript.restart-server",
+        "title": "Restart server",
+        "category": "Numscript"
+      },
+      {
+        "command": "numscript.helloWorld",
+        "title": "hello world",
+        "category": "Numscript"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "yarn run compile && yarn run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.91.0",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.11.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
