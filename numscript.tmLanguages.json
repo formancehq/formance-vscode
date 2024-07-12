@@ -66,11 +66,8 @@
           "include": "#decimal_number"
         },
         {
-          "include": "#boolean"
-        },
-        {
-          "name": "entity.name.type.numscript",
-          "match": "[[:upper:]][[:word:]]*"
+          "name": "constant.language.numscript",
+          "match": "[[:upper:]][[:word:]]*(/[[:digit:]]*)?"
         }
       ]
     },
