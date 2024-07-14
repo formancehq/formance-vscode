@@ -27,7 +27,7 @@
         },
         {
           "name": "keyword.other",
-          "match": "\\b(allowing|unbounded|overdraft|kept)\\b"
+          "match": "\\b(allowing|unbounded|overdraft|up|kept)\\b"
         },
         {
           "name": "keyword.operator.arithmetic.numscript",
