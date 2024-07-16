@@ -12,7 +12,7 @@ import fs from "node:fs";
 import tar from "tar-fs";
 import { pipeline } from "stream";
 import util from "node:util";
-import zlib from "zlib";
+import zlib from "node:zlib";
 
 const RESTART_SERVER_COMMAND = "numscript.restartServer";
 

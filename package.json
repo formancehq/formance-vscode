@@ -1,11 +1,11 @@
 {
   "name": "numscript-prototype-vscode",
-  "displayName": "numscript-prototype-vscode",
+  "displayName": "Numscript",
   "publisher": "formancehq",
-  "description": "",
+  "description": "Language support for Numscript.",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.91.0"
+    "vscode": "^1.59.0"
   },
   "categories": [
     "Programming Languages"
@@ -59,10 +59,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "yarn run compile && yarn run lint",
+    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
@@ -70,7 +70,7 @@
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
     "@types/tar-fs": "^2.0.4",
-    "@types/vscode": "^1.91.0",
+    "@types/vscode": "^1.59.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
@@ -78,10 +78,9 @@
     "eslint": "^8.57.0",
     "typescript": "^5.4.5"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "dependencies": {
     "tar-fs": "^3.0.6",
-    "vscode-languageclient": "^9.0.1",
-    "zlib": "^1.0.5"
-  }
+    "vscode-languageclient": "^9.0.1"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
