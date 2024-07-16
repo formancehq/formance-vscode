@@ -56,7 +56,13 @@
           "description": "Path to the language server binary."
         }
       }
-    }
+    },
+    "snippets": [
+      {
+        "language": "numscript",
+        "path": "./snippets.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

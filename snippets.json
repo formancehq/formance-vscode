@@ -1,0 +1,27 @@
+{
+  "send!": {
+    "prefix": ["send"],
+    "body": [
+      "send ${1:[CURRENCY 0]} (",
+      "  source = $2",
+      "  destination = $3",
+      ")"
+    ],
+    "description": "send statement"
+  },
+  "vars!": {
+    "prefix": ["vars"],
+    "body": ["vars {", "  $1 \\$$2", "}", ""],
+    "description": "variable declarations"
+  },
+  "set_tx_meta!": {
+    "prefix": ["set_tx_meta"],
+    "body": ["set_tx_meta(\"${1:key}\", $2)"],
+    "description": "variable declarations"
+  },
+  "set_account_meta!": {
+    "prefix": ["set_account_meta"],
+    "body": ["set_account_meta(@${1:account}, \"${2:key}\", $3)"],
+    "description": "variable declarations"
+  }
+}
