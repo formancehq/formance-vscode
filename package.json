@@ -1,10 +1,11 @@
 {
   "name": "numscript-prototype-vscode",
-  "displayName": "numscript-prototype-vscode",
-  "description": "",
+  "displayName": "Numscript",
+  "publisher": "formancehq",
+  "description": "Language support for Numscript.",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.91.0"
+    "vscode": "^1.59.0"
   },
   "categories": [
     "Programming Languages"
@@ -22,6 +23,10 @@
         "extensions": [
           ".num"
         ],
+        "icon": {
+          "dark": "./images/slate-icon.svg",
+          "light": "./images/emerald-icon.svg"
+        },
         "configuration": "./language-configuration.json"
       }
     ],
@@ -43,29 +48,52 @@
         "title": "hello world",
         "category": "Numscript"
       }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Numscript",
+      "properties": {
+        "numscript.server-path": {
+          "scope": "resource",
+          "type": "string",
+          "default": null,
+          "description": "Path to the language server binary."
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "numscript",
+        "path": "./snippets.json"
+      }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "package": "npx vsce package",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "yarn run compile && yarn run lint",
+    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
-    "@types/vscode": "^1.91.0",
+    "@types/tar-fs": "^2.0.4",
+    "@types/vscode": "^1.59.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
     "eslint": "^8.57.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vsce": "^2.15.0"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "dependencies": {
+    "node-fetch": "^3.3.2",
+    "tar-fs": "^3.0.6",
     "vscode-languageclient": "^9.0.1"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
