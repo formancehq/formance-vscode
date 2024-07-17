@@ -85,6 +85,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "node-fetch": "^3.3.2",
     "tar-fs": "^3.0.6",
     "vscode-languageclient": "^9.0.1"
   },

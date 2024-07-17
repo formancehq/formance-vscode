@@ -13,6 +13,7 @@ import tar from "tar-fs";
 import { pipeline } from "stream";
 import util from "node:util";
 import zlib from "node:zlib";
+const fetch = require("node-fetch");
 
 const RESTART_SERVER_COMMAND = "numscript.restartServer";
 
@@ -45,7 +46,6 @@ export async function fetchReleaseInfo(): Promise<GithubRelease> {
     }
   );
   if (!response.ok) {
-    console.log("Error fetching latest release info");
     throw new Error(
       `Got response ${response.status} when trying to fetch latest release`
     );
@@ -103,19 +103,19 @@ async function downloadServer(
       title: "Downloading...",
     },
     async (progress, _cancellationToken) => {
-      // let readBytes = 0;
-      // if (res === null) {
-      //   return;
-      // }
-      // res.body.on("data", (chunk: Buffer) => {
-      //   readBytes += chunk.length;
-      //   let percentage = readBytes / totalBytes;
-      //   progress.report({
-      //     message: `${percentage}`,
-      //     increment: chunk.length / totalBytes,
-      //   });
-      //   console.log(`${readBytes} / ${totalBytes}`);
-      // });
+      let readBytes = 0;
+      if (res === null) {
+        return;
+      }
+      res.body.on("data", (chunk: Buffer) => {
+        readBytes += chunk.length;
+        let percentage = readBytes / totalBytes;
+        progress.report({
+          message: `${percentage}`,
+          increment: chunk.length / totalBytes,
+        });
+        console.log(`${readBytes} / ${totalBytes}`);
+      });
     }
   );
 
@@ -160,7 +160,6 @@ async function resolveServerPath(
       "numscript-prototype"
     );
     if (fs.existsSync(serverPath)) {
-      console.log("SERVER PATH EXISTS");
       return serverPath;
     }
   }
