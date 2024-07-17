@@ -23,6 +23,10 @@
         "extensions": [
           ".num"
         ],
+        "icon": {
+          "dark": "./images/slate-icon.svg",
+          "light": "./images/emerald-icon.svg"
+        },
         "configuration": "./language-configuration.json"
       }
     ],
