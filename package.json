@@ -24,8 +24,8 @@
           ".num"
         ],
         "icon": {
-          "dark": "./images/slate-icon.svg",
-          "light": "./images/emerald-icon.svg"
+          "dark": "./images/slate-icon.png",
+          "light": "./images/emerald-icon.png"
         },
         "configuration": "./language-configuration.json"
       }
