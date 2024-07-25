@@ -38,7 +38,8 @@ export interface GithubRelease {
 }
 
 export async function fetchReleaseInfo(): Promise<GithubRelease> {
-  const fetch = require("node-fetch");
+  const { default: fetch } = await import("node-fetch");
+
   const response = await fetch(
     "https://api.github.com/repos/ascandone/numscript-prototype/releases/latest",
     {
@@ -88,7 +89,7 @@ async function downloadServer(
 
   vscode.workspace.fs.createDirectory(ctx.globalStorageUri);
   const globalStorage = path.parse(ctx.globalStorageUri.fsPath);
-  const fetch = require("node-fetch");
+  const { default: fetch } = await import("node-fetch");
   const res = await fetch(asset.browser_download_url.toString());
   if (!res.ok) {
     throw new Error(`couldn't download file: got status code ${res.status}`);
@@ -105,7 +106,7 @@ async function downloadServer(
     },
     async (progress, _cancellationToken) => {
       let readBytes = 0;
-      if (res === null) {
+      if (res === null || res.body === null) {
         return;
       }
       res.body.on("data", (chunk: Buffer) => {
@@ -179,17 +180,8 @@ async function resolveServerPath(
   return downloadedServerPath;
 }
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
   const releaseInfo = await resolveServerPath(context);
-
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log(
-    'Congratulations, your extension "numscript-prototype-vscode" is now active!',
-    releaseInfo
-  );
 
   const executable: Executable = {
     command: releaseInfo,
@@ -203,7 +195,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const client = new LanguageClient(
-    "numscript-ls",
+    "formance-vscode",
     "Numscript language client",
     serverOptions,
     clientOptions

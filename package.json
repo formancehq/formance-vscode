@@ -1,8 +1,8 @@
 {
-  "name": "numscript-prototype-vscode",
-  "displayName": "Numscript",
+  "name": "formance-vscode",
+  "displayName": "Formance vscode",
   "publisher": "formancehq",
-  "description": "Language support for Numscript.",
+  "description": "Formance support for vscode.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.59.0"
