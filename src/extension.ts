@@ -194,7 +194,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const executable: Executable = {
     command: releaseInfo,
     args: ["lsp"],
-    transport: TransportKind.stdio,
   };
 
   const serverOptions: ServerOptions = {
