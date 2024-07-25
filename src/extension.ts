@@ -14,6 +14,9 @@ import { pipeline } from "stream";
 import util from "node:util";
 import zlib from "node:zlib";
 
+const NUMSCRIPT_EXECUTABLE_NAME = "numscript";
+const SERVER_TIMESTAMP = "serverTimestamp";
+
 const RESTART_SERVER_COMMAND = "numscript.restartServer";
 
 const clientOptions = {
@@ -77,7 +80,7 @@ async function downloadServer(
     throw new Error("no available binaries");
   }
 
-  let asset = assets.find((a) => a.name.toString().includes(platform));
+  const asset = assets.find((a) => a.name.toString().includes(platform));
 
   if (asset === undefined) {
     throw new Error(
@@ -111,7 +114,7 @@ async function downloadServer(
       }
       res.body.on("data", (chunk: Buffer) => {
         readBytes += chunk.length;
-        let percentage = readBytes / totalBytes;
+        const percentage = readBytes / totalBytes;
         progress.report({
           message: `${percentage}`,
           increment: chunk.length / totalBytes,
@@ -138,7 +141,7 @@ async function downloadServer(
 async function resolveServerPath(
   ctx: vscode.ExtensionContext
 ): Promise<string> {
-  let serverPath = vscode.workspace
+  const serverPath = vscode.workspace
     .getConfiguration("numscript")
     .get("server-path")!;
 
@@ -148,25 +151,27 @@ async function resolveServerPath(
     return serverPath as string;
   }
 
-  let releaseInfo = await fetchReleaseInfo();
-  console.log({ releaseInfo });
+  const releaseInfo = await fetchReleaseInfo();
 
-  let currentServerTimestamp = ctx.globalState.get("serverTimestamp");
+  const currentServerTimestamp = ctx.globalState.get(SERVER_TIMESTAMP);
   console.log(
     `stored timestamp: ${currentServerTimestamp}\nlatest timestamp: ${releaseInfo.published_at}`
   );
 
   if (currentServerTimestamp === releaseInfo.published_at) {
-    let serverPath = path.join(
+    const serverPath = path.join(
       ctx.globalStorageUri.fsPath,
-      "numscript-prototype"
+      NUMSCRIPT_EXECUTABLE_NAME
     );
-    if (fs.existsSync(serverPath)) {
+
+    const alreadyExists = fs.existsSync(serverPath);
+
+    if (alreadyExists) {
       return serverPath;
     }
   }
 
-  let selection = await vscode.window.showInformationMessage(
+  const selection = await vscode.window.showInformationMessage(
     "Do you want to download the language server ?",
     "Yes",
     "No"
@@ -176,7 +181,10 @@ async function resolveServerPath(
   }
 
   const downloadedServerPath = await downloadServer(releaseInfo.assets, ctx);
-  ctx.globalState.update("serverTimestamp", releaseInfo.published_at);
+  ctx.globalState.update(SERVER_TIMESTAMP, releaseInfo.published_at);
+  vscode.window.showInformationMessage(
+    "Numscript language server downladed succesfully"
+  );
   return downloadedServerPath;
 }
 
