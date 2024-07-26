@@ -1,0 +1,23 @@
+name: release
+on:
+  release:
+    types: [created]
+permissions:
+  contents: write
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+      - run: yarn install --frozen-lockfile --prefer-offline
+      - name: Package extension
+        run: yarn package
+      - name: Publish
+        run: npx vsce publish -p ${{ secrets.VS_MARKETPLACE_TOKEN }}

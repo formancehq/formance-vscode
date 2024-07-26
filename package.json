@@ -75,9 +75,12 @@
     "package": "npx vsce package",
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
+    "ts:check": "tsc --noEmit",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
+    "format:check": "prettier --check src/**",
+    "format": "prettier --write src/**",
     "test": "vscode-test"
   },
   "devDependencies": {
@@ -90,6 +93,7 @@
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
     "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
     "typescript": "^5.4.5",
     "vsce": "^2.15.0"
   },

@@ -46,11 +46,11 @@ export async function fetchReleaseInfo(): Promise<GithubRelease> {
     "https://api.github.com/repos/ascandone/numscript-prototype/releases/latest",
     {
       headers: { Accept: "application/vnd.github.v3+json" },
-    }
+    },
   );
   if (!response.ok) {
     throw new Error(
-      `Got response ${response.status} when trying to fetch latest release`
+      `Got response ${response.status} when trying to fetch latest release`,
     );
   }
 
@@ -67,14 +67,14 @@ const platformBinaries: Record<string, string> = {
 
 async function downloadServer(
   assets: Array<GithubAsset>,
-  ctx: vscode.ExtensionContext
+  ctx: vscode.ExtensionContext,
 ): Promise<string> {
   const platform = platformBinaries[`${process.arch} ${process.platform}`];
   if (platform === undefined) {
     vscode.window.showErrorMessage(
       "Your platform does not have prebuilt language server binaries yet, " +
         "you'll have to clone numary/numscript-ls and build the server yourself, " +
-        "then set the server path in the Numscript Extension's settings."
+        "then set the server path in the Numscript Extension's settings.",
     );
     throw new Error("no available binaries");
   }
@@ -84,8 +84,8 @@ async function downloadServer(
   if (asset === undefined) {
     throw new Error(
       `Asset '${platform}' not found (given " + ${JSON.stringify(
-        assets.map((a) => a.name)
-      )})`
+        assets.map((a) => a.name),
+      )})`,
     );
   }
 
@@ -120,25 +120,25 @@ async function downloadServer(
         });
         console.log(`${readBytes} / ${totalBytes}`);
       });
-    }
+    },
   );
 
   const extracted = tar.extract(
-    path.join(globalStorage.dir, globalStorage.base)
+    path.join(globalStorage.dir, globalStorage.base),
   );
   console.log(extracted);
 
   await util.promisify(pipeline)(
     res.body!,
     zlib.createGunzip(),
-    tar.extract(path.join(globalStorage.dir, globalStorage.base))
+    tar.extract(path.join(globalStorage.dir, globalStorage.base)),
   );
 
   return path.join(globalStorage.dir, globalStorage.base, "numscript");
 }
 
 async function resolveServerPath(
-  ctx: vscode.ExtensionContext
+  ctx: vscode.ExtensionContext,
 ): Promise<string> {
   const serverPath = vscode.workspace
     .getConfiguration("numscript")
@@ -154,13 +154,13 @@ async function resolveServerPath(
 
   const currentServerTimestamp = ctx.globalState.get(SERVER_TIMESTAMP);
   console.log(
-    `stored timestamp: ${currentServerTimestamp}\nlatest timestamp: ${releaseInfo.published_at}`
+    `stored timestamp: ${currentServerTimestamp}\nlatest timestamp: ${releaseInfo.published_at}`,
   );
 
   if (currentServerTimestamp === releaseInfo.published_at) {
     const serverPath = path.join(
       ctx.globalStorageUri.fsPath,
-      NUMSCRIPT_EXECUTABLE_NAME
+      NUMSCRIPT_EXECUTABLE_NAME,
     );
 
     const alreadyExists = fs.existsSync(serverPath);
@@ -173,7 +173,7 @@ async function resolveServerPath(
   const selection = await vscode.window.showInformationMessage(
     "Do you want to download the language server ?",
     "Yes",
-    "No"
+    "No",
   );
   if (selection !== "Yes") {
     throw new Error("user refused to download");
@@ -182,7 +182,7 @@ async function resolveServerPath(
   const downloadedServerPath = await downloadServer(releaseInfo.assets, ctx);
   ctx.globalState.update(SERVER_TIMESTAMP, releaseInfo.published_at);
   vscode.window.showInformationMessage(
-    "Numscript language server downladed succesfully"
+    "Numscript language server downladed succesfully",
   );
   return downloadedServerPath;
 }
@@ -204,7 +204,7 @@ export async function activate(context: vscode.ExtensionContext) {
     "formance-vscode",
     "Numscript language client",
     serverOptions,
-    clientOptions
+    clientOptions,
   );
 
   // Copied from:
@@ -228,7 +228,7 @@ export async function activate(context: vscode.ExtensionContext) {
       } catch (err) {
         client.error("Restarting client failed", err, "force");
       }
-    }
+    },
   );
 
   client.start().catch((e) => {
