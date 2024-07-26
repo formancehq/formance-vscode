@@ -12,6 +12,7 @@ import tar from "tar-fs";
 import { pipeline } from "stream";
 import util from "node:util";
 import zlib from "node:zlib";
+const fetch = require("node-fetch");
 
 const NUMSCRIPT_REPO = "formancehq/numscript";
 const NUMSCRIPT_EXECUTABLE_NAME = "numscript";
@@ -41,8 +42,6 @@ export interface GithubRelease {
 }
 
 export async function fetchReleaseInfo(): Promise<GithubRelease> {
-  const { default: fetch } = await import("node-fetch");
-
   const response = await fetch(
     `https://api.github.com/repos/${NUMSCRIPT_REPO}/releases/latest`,
     {
@@ -92,7 +91,6 @@ async function downloadServer(
 
   vscode.workspace.fs.createDirectory(ctx.globalStorageUri);
   const globalStorage = path.parse(ctx.globalStorageUri.fsPath);
-  const { default: fetch } = await import("node-fetch");
   const res = await fetch(asset.browser_download_url.toString());
   if (!res.ok) {
     throw new Error(`couldn't download file: got status code ${res.status}`);
