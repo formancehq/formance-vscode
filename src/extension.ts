@@ -140,7 +140,7 @@ async function downloadServer(
 
 async function resolveServerPath(
   ctx: vscode.ExtensionContext,
-): Promise<string> {
+): Promise<string | undefined> {
   const serverPath = vscode.workspace
     .getConfiguration("numscript")
     .get("server-path")!;
@@ -177,7 +177,7 @@ async function resolveServerPath(
     "No",
   );
   if (selection !== "Yes") {
-    throw new Error("user refused to download");
+    return undefined;
   }
 
   const downloadedServerPath = await downloadServer(releaseInfo.assets, ctx);
@@ -190,6 +190,9 @@ async function resolveServerPath(
 
 export async function activate(context: vscode.ExtensionContext) {
   const releaseInfo = await resolveServerPath(context);
+  if (releaseInfo === undefined) {
+    return;
+  }
 
   const executable: Executable = {
     command: releaseInfo,
