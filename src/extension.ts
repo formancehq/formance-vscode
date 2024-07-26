@@ -13,6 +13,7 @@ import { pipeline } from "stream";
 import util from "node:util";
 import zlib from "node:zlib";
 
+const NUMSCRIPT_REPO = "formancehq/formance-vscode";
 const NUMSCRIPT_EXECUTABLE_NAME = "numscript";
 const SERVER_TIMESTAMP = "serverTimestamp";
 
@@ -43,7 +44,7 @@ export async function fetchReleaseInfo(): Promise<GithubRelease> {
   const { default: fetch } = await import("node-fetch");
 
   const response = await fetch(
-    "https://api.github.com/repos/ascandone/numscript-prototype/releases/latest",
+    `https://api.github.com/repos/${NUMSCRIPT_REPO}/releases/latest`,
     {
       headers: { Accept: "application/vnd.github.v3+json" },
     },
