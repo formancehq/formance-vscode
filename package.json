@@ -3,7 +3,7 @@
   "displayName": "Formance vscode",
   "publisher": "formance",
   "description": "Formance support for vscode.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "repository": "https://github.com/formancehq/formance-vscode",
   "engines": {
