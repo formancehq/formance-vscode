@@ -112,9 +112,9 @@ async function downloadServer(
       }
       res.body.on("data", (chunk: Buffer) => {
         readBytes += chunk.length;
-        const percentage = readBytes / totalBytes;
+        const percentage = Math.round(readBytes / totalBytes) * 100;
         progress.report({
-          message: `${percentage}`,
+          message: `${percentage}%`,
           increment: chunk.length / totalBytes,
         });
         console.log(`${readBytes} / ${totalBytes}`);
