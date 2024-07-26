@@ -6,7 +6,6 @@ import {
   Executable,
   LanguageClient,
   ServerOptions,
-  TransportKind,
 } from "vscode-languageclient/node";
 import fs from "node:fs";
 import tar from "tar-fs";
