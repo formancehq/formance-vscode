@@ -119,13 +119,13 @@ async function downloadServer(
         });
         console.log(`${readBytes} / ${totalBytes}`);
       });
-    },
-  );
 
-  await util.promisify(pipeline)(
-    res.body!,
-    zlib.createGunzip(),
-    tar.extract(path.join(globalStorage.dir, globalStorage.base)),
+      await util.promisify(pipeline)(
+        res.body!,
+        zlib.createGunzip(),
+        tar.extract(path.join(globalStorage.dir, globalStorage.base)),
+      );
+    },
   );
 
   return path.join(globalStorage.dir, globalStorage.base, "numscript");
