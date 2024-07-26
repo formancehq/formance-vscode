@@ -13,7 +13,7 @@ import { pipeline } from "stream";
 import util from "node:util";
 import zlib from "node:zlib";
 
-const NUMSCRIPT_REPO = "formancehq/formance-vscode";
+const NUMSCRIPT_REPO = "formancehq/numscript";
 const NUMSCRIPT_EXECUTABLE_NAME = "numscript";
 const SERVER_TIMESTAMP = "serverTimestamp";
 
