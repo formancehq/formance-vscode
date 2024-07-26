@@ -124,11 +124,6 @@ async function downloadServer(
     },
   );
 
-  const extracted = tar.extract(
-    path.join(globalStorage.dir, globalStorage.base),
-  );
-  console.log(extracted);
-
   await util.promisify(pipeline)(
     res.body!,
     zlib.createGunzip(),
@@ -181,6 +176,8 @@ async function resolveServerPath(
   }
 
   const downloadedServerPath = await downloadServer(releaseInfo.assets, ctx);
+  console.log({ downloadedServerPath });
+
   ctx.globalState.update(SERVER_TIMESTAMP, releaseInfo.published_at);
   vscode.window.showInformationMessage(
     "Numscript language server downladed succesfully",
@@ -190,6 +187,7 @@ async function resolveServerPath(
 
 export async function activate(context: vscode.ExtensionContext) {
   const releaseInfo = await resolveServerPath(context);
+  console.log({ releaseInfo });
   if (releaseInfo === undefined) {
     return;
   }
