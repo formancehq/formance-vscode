@@ -97,6 +97,10 @@
           "match": "(@)[[:word:]]*(:[[:word:]]*)?"
         },
         {
+          "name": "support.function.numscript",
+          "match": "\\b(set_tx_meta|set_account_meta|meta|balance)\\b"
+        },
+        {
           "name": "comment.unused.numscript",
           "match": "\\b\\@([\\w]+)"
         },
