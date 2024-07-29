@@ -57,22 +57,43 @@ export async function fetchReleaseInfo(): Promise<GithubRelease> {
   return (await response.json()) as any;
 }
 
-const platformBinaries: Record<string, string> = {
-  "x64 windows": "Windows_amd64",
-  "x64 linux": "Linux_amd64",
-  "arm64 linux": "Linux_arm64",
-  "x64 darwin": "Darwin_amd64",
-  "arm64 darwin": "Darwin_arm64",
+const ARCHS: Record<string, string> = {
+  x64: "x86_64",
+  arm64: "arm64",
 };
+
+const PLATFORMS: Record<string, string> = {
+  win64: "Windows",
+  windows: "Windows",
+  linux: "Linux",
+  darwin: "Darwin",
+};
+
+function getPlatformBinary(
+  arch = process.arch,
+  platform = process.platform,
+): string | undefined {
+  const archLookup = ARCHS[arch];
+  if (archLookup === undefined) {
+    return undefined;
+  }
+
+  const platformLookup = PLATFORMS[platform];
+  if (platformLookup === undefined) {
+    return undefined;
+  }
+
+  return `${platformLookup}_${archLookup}`;
+}
 
 async function downloadServer(
   assets: Array<GithubAsset>,
   ctx: vscode.ExtensionContext,
 ): Promise<string> {
-  const platform = platformBinaries[`${process.arch} ${process.platform}`];
+  const platform = getPlatformBinary();
   if (platform === undefined) {
     vscode.window.showErrorMessage(
-      "Your platform does not have prebuilt language server binaries yet, " +
+      `Your platform (${process.platform} - ${process.arch}) does not have prebuilt language server binaries yet, ` +
         "you'll have to clone numary/numscript-ls and build the server yourself, " +
         "then set the server path in the Numscript Extension's settings.",
     );
