@@ -23,7 +23,7 @@
       "patterns": [
         {
           "name": "keyword.control.numscript",
-          "match": "\\b(vars|send|source|destination|to|from|max|remaining)\\b"
+          "match": "\\b(vars|send|save|source|destination|to|from|max|remaining)\\b"
         },
         {
           "name": "keyword.other",
