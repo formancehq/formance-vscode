@@ -94,8 +94,8 @@ async function downloadServer(
   if (platform === undefined) {
     vscode.window.showErrorMessage(
       `Your platform (${process.platform} - ${process.arch}) does not have prebuilt language server binaries yet, ` +
-        "you'll have to clone numary/numscript-ls and build the server yourself, " +
-        "then set the server path in the Numscript Extension's settings.",
+        "you'll have to clone formancehq/numscript and build the server yourself, " +
+        "then set the server path in the Formance Extension's settings.",
     );
     throw new Error("no available binaries");
   }
