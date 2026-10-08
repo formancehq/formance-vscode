@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      typescript-eslint:
+        patterns: ["@typescript-eslint/*", "typescript-eslint"]
+      eslint:
+        patterns: ["eslint", "@eslint/*"]
+      vscode-test:
+        patterns: ["@vscode/test-*"]
+    ignore:
+      # Must match engines.vscode; bump both together.
+      - dependency-name: "@types/vscode"
+      # Must match the Node.js version shipped with engines.vscode.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

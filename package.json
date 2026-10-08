@@ -3,17 +3,18 @@
   "displayName": "Formance vscode",
   "publisher": "formance",
   "description": "Formance support for vscode.",
-  "version": "0.0.4",
+  "version": "0.1.0",
+  "private": true,
   "license": "MIT",
   "repository": "https://github.com/formancehq/formance-vscode",
   "engines": {
-    "vscode": "^1.59.0"
+    "vscode": "^1.94.0"
   },
   "categories": [
     "Programming Languages"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "icon": "images/slate-icon.png",
   "contributes": {
     "languages": [
@@ -43,12 +44,12 @@
     "commands": [
       {
         "command": "numscript.restartServer",
-        "title": "Restart server",
+        "title": "Restart language server",
         "category": "Numscript"
       },
       {
-        "command": "numscript.helloWorld",
-        "title": "hello world",
+        "command": "numscript.updateServer",
+        "title": "Download or update language server",
         "category": "Numscript"
       }
     ],
@@ -57,10 +58,10 @@
       "title": "Numscript",
       "properties": {
         "numscript.server-path": {
-          "scope": "resource",
+          "scope": "machine",
           "type": "string",
-          "default": null,
-          "description": "Path to the language server binary."
+          "default": "",
+          "description": "Path to the numscript binary used as language server. When empty, the extension downloads the latest release from GitHub."
         }
       }
     },
@@ -72,36 +73,35 @@
     ]
   },
   "scripts": {
-    "package": "npx vsce package",
-    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "yarn ts:check && yarn bundle --production",
+    "bundle": "node esbuild.mjs",
     "compile": "tsc -p ./",
-    "ts:check": "tsc --noEmit",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "format:check": "prettier --check src/**",
-    "format": "prettier --write src/**",
+    "ts:check": "tsc --noEmit -p ./",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "test:grammar": "vscode-tmgrammar-test -g numscript.tmLanguages.json 'test/grammar/*.num'",
+    "pretest": "yarn compile && yarn bundle",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.7",
+    "@eslint/js": "^10.0.1",
+    "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/node-fetch": "^2.6.11",
-    "@types/tar-fs": "^2.0.4",
-    "@types/vscode": "^1.59.0",
-    "@typescript-eslint/eslint-plugin": "^7.14.1",
-    "@typescript-eslint/parser": "^7.11.0",
-    "@vscode/test-cli": "^0.0.9",
-    "@vscode/test-electron": "^2.4.0",
-    "eslint": "^8.57.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.4.5",
-    "vsce": "^2.15.0"
-  },
-  "dependencies": {
-    "node-fetch": "^2.7.0",
-    "tar-fs": "^3.0.6",
-    "vscode-languageclient": "^9.0.1"
+    "@types/vscode": "~1.94.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "ovsx": "^1.2.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vscode-languageclient": "^10.1.2",
+    "vscode-tmgrammar-test": "^0.1.3"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

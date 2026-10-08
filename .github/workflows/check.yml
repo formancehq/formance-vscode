@@ -1,14 +1,37 @@
 name: CI
-on: push
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  main:
+  pr:
+    if: github.event_name == 'pull_request'
+    uses: formancehq/ci/.github/workflows/go-pr.yml@v1
+    permissions:
+      contents: none
+      pull-requests: read
+      statuses: write
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
-          cache: "yarn"
-      - run: yarn install --frozen-lockfile --prefer-offline
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
       - run: yarn format:check
-      - run: yarn ts:check
+      - run: yarn lint
+      - run: yarn compile
+      - run: yarn test:grammar
+      - run: xvfb-run -a yarn test
+      - run: yarn package
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: "*.vsix"

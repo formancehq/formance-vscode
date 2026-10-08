@@ -1,0 +1,73 @@
+// SYNTAX TEST "source.numscript" "numscript grammar"
+
+#![feature("experimental-oneof")]
+// <-- meta.preprocessor.feature.numscript punctuation.definition.preprocessor.numscript
+// ^^^^^^^ meta.preprocessor.feature.numscript keyword.other.feature.numscript
+//         ^^^^^^^^^^^^^^^^^^^^ meta.preprocessor.feature.numscript string.quoted.double.numscript
+
+vars {
+// <---- keyword.control.numscript
+  monetary $amount
+//^^^^^^^^ storage.type.numscript
+//         ^^^^^^^ variable.other.numscript
+  account $user_1 = meta(@users:$id, "owner")
+//                  ^^^^ support.function.numscript
+//                       ^^^^^^^^^^ entity.name.namespace.account.numscript
+//                                   ^^^^^^^ string.quoted.double.numscript
+}
+
+/* block
+   comment */
+// <----------- comment.block.numscript
+
+/* see https://docs.formance.com */ save [USD/2 *] from @a
+//                                  ^^^^ keyword.control.numscript
+
+/* outer /* nested */ still comment */ save [USD/2 *] from @a
+//                    ^^^^^^^^^^^^^^^^ comment.block.numscript
+//                                     ^^^^ keyword.control.numscript
+
+#![feature("unterminated"
+save [USD/2 *] from @a
+// <---- keyword.control.numscript
+
+send [USD/2 100_000] (
+// <---- keyword.control.numscript
+//    ^^^^^ constant.language.asset.numscript
+//          ^^^^^^^ constant.numeric.numscript
+  source = oneof {
+//         ^^^^^ keyword.control.numscript
+    @payments:stripe-eu \ EUR allowing overdraft up to [EUR 10]
+//  ^^^^^^^^^^^^^^^^^^^ entity.name.namespace.account.numscript
+//                      ^ keyword.operator.restrict.numscript
+//                            ^^^^^^^^ keyword.other.numscript
+//                                     ^^^^^^^^^ keyword.other.numscript
+    @world allowing unbounded overdraft
+//                  ^^^^^^^^^ keyword.other.numscript
+  }
+  destination = {
+    12.5% to @fees
+//  ^^^^^ constant.numeric.percentage.numscript
+//        ^^ keyword.control.numscript
+    remaining kept
+//  ^^^^^^^^^ keyword.control.numscript
+//            ^^^^ keyword.other.numscript
+  }
+)
+
+save [USD/2 *] from @alice
+// <---- keyword.control.numscript
+//          ^ keyword.operator.arithmetic.numscript
+
+set_tx_meta("limit", overdraft(@alice, USD/2))
+// <----------- support.function.numscript
+//                   ^^^^^^^^^ support.function.numscript
+
+send [COIN 1] (
+  source = @swap with scaling through @pool
+//               ^^^^ keyword.other.numscript
+//                    ^^^^^^^ keyword.other.numscript
+//                            ^^^^^^^ keyword.control.numscript
+  destination = @bob // trailing comment
+//                   ^^^^^^^^^^^^^^^^^^^ comment.line.double-slash.numscript
+)
