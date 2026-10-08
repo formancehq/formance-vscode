@@ -2,36 +2,79 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Numscript",
   "patterns": [
-    {
-      "include": "#comments"
-    },
-    {
-      "include": "#keywords"
-    },
-    {
-      "include": "#strings"
-    },
-    {
-      "include": "#constant"
-    },
-    {
-      "include": "#entity"
-    }
+    { "include": "#comments" },
+    { "include": "#feature" },
+    { "include": "#functions" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#strings" },
+    { "include": "#constant" },
+    { "include": "#entity" }
   ],
   "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.numscript",
+          "match": "//.*$"
+        },
+        { "include": "#block_comment" }
+      ]
+    },
+    "block_comment": {
+      "name": "comment.block.numscript",
+      "begin": "/\\*",
+      "end": "\\*/",
+      "patterns": [{ "include": "#block_comment" }]
+    },
+    "feature": {
+      "name": "meta.preprocessor.feature.numscript",
+      "begin": "#!",
+      "end": "(?<=\\])|$",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.preprocessor.numscript" }
+      },
+      "patterns": [
+        {
+          "name": "keyword.other.feature.numscript",
+          "match": "\\bfeature\\b"
+        },
+        { "include": "#strings" }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.numscript",
+          "match": "\\b(set_tx_meta|set_account_meta|meta|balance|overdraft|get_asset|get_amount|scoped)\\b(?=\\s*\\()"
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.numscript",
-          "match": "\\b(vars|send|save|source|destination|to|from|max|remaining)\\b"
+          "match": "\\b(vars|send|save|source|destination|to|from|max|remaining|oneof|through)\\b"
         },
         {
-          "name": "keyword.other",
-          "match": "\\b(allowing|unbounded|overdraft|up|kept)\\b"
+          "name": "keyword.other.numscript",
+          "match": "\\b(allowing|unbounded|overdraft|up|kept|with|scaling)\\b"
+        },
+        {
+          "name": "keyword.operator.restrict.numscript",
+          "match": "\\\\"
         },
         {
           "name": "keyword.operator.arithmetic.numscript",
-          "match": "(\\+|\\-|/|\\*|%)"
+          "match": "[+\\-/*]"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.numscript",
+          "match": "\\b(monetary|account|portion|asset|number|string)\\b(?=\\s+\\$)"
         }
       ]
     },
@@ -46,67 +89,33 @@
         }
       ]
     },
-    "comments": {
-      "patterns": [
-        {
-          "name": "comment.line.numscript",
-          "match": "//.*"
-        }
-      ]
-    },
     "constant": {
       "patterns": [
+        { "include": "#percentage" },
+        { "include": "#number" },
         {
-          "include": "#percentage_ratio"
-        },
-        {
-          "include": "#ratio"
-        },
-        {
-          "include": "#decimal_number"
-        },
-        {
-          "name": "constant.language.numscript",
-          "match": "[[:upper:]][[:word:]]*(/[[:digit:]]*)?"
+          "name": "constant.language.asset.numscript",
+          "match": "\\b[A-Z][A-Z0-9]*(?:/[0-9]+)?\\b"
         }
       ]
     },
-    "percentage_ratio": {
+    "percentage": {
       "name": "constant.numeric.percentage.numscript",
-      "match": "([[:digit:]]+)(%)",
-      "patterns": []
+      "match": "\\b[0-9]+(?:\\.[0-9]+)?%"
     },
-    "ratio": {
-      "name": "constant.numeric.ratio.numscript",
-      "match": "\\b[[:digit:]][[:digit:]_]*(/[[:digit:]]*)?\\b",
-      "patterns": []
-    },
-    "decimal_number": {
-      "name": "constant.numeric.decimal.numscript",
-      "match": "\\b[[:digit:]][[:digit:]_]*(\\.[[:digit:]]*)?\\b",
-      "patterns": []
+    "number": {
+      "name": "constant.numeric.numscript",
+      "match": "\\b[0-9]+(?:_[0-9]+)*\\b"
     },
     "entity": {
       "patterns": [
         {
           "name": "variable.other.numscript",
-          "match": "(\\$)[[:lower:]][[:word:]]*"
+          "match": "\\$[a-z_][a-z0-9_]*"
         },
         {
-          "name": "entity.name.namespace.numscript",
-          "match": "(@)[[:word:]]*(:[[:word:]]*)?"
-        },
-        {
-          "name": "support.function.numscript",
-          "match": "\\b(set_tx_meta|set_account_meta|meta|balance)\\b"
-        },
-        {
-          "name": "comment.unused.numscript",
-          "match": "\\b\\@([\\w]+)"
-        },
-        {
-          "match": "\\b_\\b",
-          "name": "comment.wildcard.numscript"
+          "name": "entity.name.namespace.account.numscript",
+          "match": "@(?:[A-Za-z0-9_-]+|\\$[a-z_][a-z0-9_]*)(?::(?:[A-Za-z0-9_-]+|\\$[a-z_][a-z0-9_]*))*"
         }
       ]
     }
