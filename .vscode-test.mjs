@@ -5,6 +5,7 @@ import { defineConfig } from "@vscode/test-cli";
 const base = {
   files: "out/test/**/*.test.js",
   mocha: { ui: "tdd", timeout: 20000 },
+  env: { NUMSCRIPT_START_TIMEOUT_MS: "2000" },
 };
 
 // VS Code's IPC socket lives in the user data dir and its path must stay

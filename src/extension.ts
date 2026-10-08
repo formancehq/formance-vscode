@@ -6,8 +6,10 @@ import * as server from "./server";
 const SERVER_VERSION_KEY = "serverVersion";
 // Key used by versions before 0.1.0, which tracked the release date.
 const LEGACY_SERVER_TIMESTAMP_KEY = "serverTimestamp";
-// How long the server may take to answer the LSP initialize request.
-const START_TIMEOUT_MS = 30_000;
+// How long the server may take to answer the LSP initialize request. The
+// environment override exists for the tests.
+const START_TIMEOUT_MS =
+  Number(process.env.NUMSCRIPT_START_TIMEOUT_MS) || 30_000;
 // How long a stop waits for a client that is still starting.
 const STOP_WAIT_MS = 5_000;
 // How long a stopped server may take to exit before it is killed.
@@ -124,9 +126,6 @@ async function startClient(
   );
   const defaultErrorHandler = candidate.createDefaultErrorHandler();
 
-  // Tracked before it starts so that a later stop can still reach a server
-  // that answers late.
-  client = candidate;
   try {
     // The client reports start failures to the user itself.
     await withTimeout(
@@ -134,7 +133,6 @@ async function startClient(
       START_TIMEOUT_MS,
       `${command} did not answer the LSP initialize request`,
     );
-    return true;
   } catch (err) {
     log.error(`Language server failed to start: ${command}`, err);
     if (candidate.state === State.Starting) {
@@ -142,8 +140,14 @@ async function startClient(
         `Numscript language server ${command} did not respond. See the Numscript output for details.`,
       );
     }
+    // Abandon it now: a server that never answered must not linger, nor
+    // become the active client if it answers late.
+    retiredClients.add(candidate);
+    killServer(serverProcesses.get(candidate));
     return false;
   }
+  client = candidate;
+  return true;
 }
 
 // Must run in the queue.
@@ -276,6 +280,10 @@ async function installServer(
   release: server.GithubRelease,
 ): Promise<void> {
   const tag = release.tag_name;
+  // The user may have set a custom server while the prompt was open.
+  if (configuredServerPath() !== undefined) {
+    return;
+  }
   // A concurrent check, or another window sharing the global storage, may
   // have installed this release while the prompt was open.
   if (ctx.globalState.get(SERVER_VERSION_KEY) === tag && client?.isRunning()) {
