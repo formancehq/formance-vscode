@@ -1,263 +1,377 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import path from "node:path";
+import { ChildProcess, spawn } from "node:child_process";
 import * as vscode from "vscode";
-import {
-  Executable,
-  LanguageClient,
-  ServerOptions,
-} from "vscode-languageclient/node";
-import fs from "node:fs";
-import tar from "tar-fs";
-import { pipeline } from "stream";
-import util from "node:util";
-import zlib from "node:zlib";
-const fetch = require("node-fetch");
+import { CloseAction, LanguageClient, State } from "vscode-languageclient/node";
+import * as server from "./server";
 
-const NUMSCRIPT_REPO = "formancehq/numscript";
-const NUMSCRIPT_EXECUTABLE_NAME = "numscript";
-const SERVER_TIMESTAMP = "serverTimestamp";
+const SERVER_VERSION_KEY = "serverVersion";
+// Key used by versions before 0.1.0, which tracked the release date.
+const LEGACY_SERVER_TIMESTAMP_KEY = "serverTimestamp";
+// How long the server may take to answer the LSP initialize request.
+const START_TIMEOUT_MS = 30_000;
+// How long a stop waits for a client that is still starting.
+const STOP_WAIT_MS = 5_000;
+// How long a stopped server may take to exit before it is killed.
+const PROCESS_EXIT_GRACE_MS = 2_000;
 
-const RESTART_SERVER_COMMAND = "numscript.restartServer";
+let client: LanguageClient | undefined;
+let log: vscode.LogOutputChannel;
+// The server process of each client. The client does not expose it, and only
+// cleans up processes it spawns itself.
+const serverProcesses = new WeakMap<LanguageClient, ChildProcess>();
+// Clients that were stopped or abandoned and must not restart.
+const retiredClients = new WeakSet<LanguageClient>();
 
-const clientOptions = {
-  documentSelector: [
-    {
-      scheme: "file",
-      language: "numscript",
-    },
-  ],
-};
+// Every operation that starts, stops or replaces the server runs through this
+// queue so that two of them never interleave, e.g. a restart during an update.
+let queue: Promise<unknown> = Promise.resolve();
 
-export interface GithubAsset {
-  name: string;
-  browser_download_url: vscode.Uri;
+function serialized<T>(operation: () => Promise<T>): Promise<T> {
+  const result = queue.then(operation);
+  queue = result.catch(() => undefined);
+  return result;
 }
 
-export interface GithubRelease {
-  name: string;
-  id: number;
-  published_at: string;
-  assets: Array<GithubAsset>;
+interface Options {
+  // True when the user explicitly asked for the operation: no confirmation
+  // prompt, and failures or "already up to date" are reported.
+  interactive: boolean;
 }
 
-export async function fetchReleaseInfo(): Promise<GithubRelease> {
-  const response = await fetch(
-    `https://api.github.com/repos/${NUMSCRIPT_REPO}/releases/latest`,
-    {
-      headers: { Accept: "application/vnd.github.v3+json" },
-    },
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Got response ${response.status} when trying to fetch latest release`,
-    );
-  }
-
-  return (await response.json()) as any;
+function configuredServerPath(): string | undefined {
+  const value = vscode.workspace
+    .getConfiguration("numscript")
+    .get<string>("server-path");
+  return value ? value : undefined;
 }
 
-const ARCHS: Record<string, string> = {
-  x64: "x86_64",
-  arm64: "arm64",
-};
-
-const PLATFORMS: Record<string, string> = {
-  win64: "Windows",
-  windows: "Windows",
-  linux: "Linux",
-  darwin: "Darwin",
-};
-
-function getPlatformBinary(
-  arch = process.arch,
-  platform = process.platform,
-): string | undefined {
-  const archLookup = ARCHS[arch];
-  if (archLookup === undefined) {
-    return undefined;
-  }
-
-  const platformLookup = PLATFORMS[platform];
-  if (platformLookup === undefined) {
-    return undefined;
-  }
-
-  return `${platformLookup}_${archLookup}`;
-}
-
-async function downloadServer(
-  assets: Array<GithubAsset>,
-  ctx: vscode.ExtensionContext,
-): Promise<string> {
-  const platform = getPlatformBinary();
-  if (platform === undefined) {
-    vscode.window.showErrorMessage(
-      `Your platform (${process.platform} - ${process.arch}) does not have prebuilt language server binaries yet, ` +
-        "you'll have to clone numary/numscript-ls and build the server yourself, " +
-        "then set the server path in the Numscript Extension's settings.",
-    );
-    throw new Error("no available binaries");
-  }
-
-  const asset = assets.find((a) => a.name.toString().includes(platform));
-
-  if (asset === undefined) {
-    throw new Error(
-      `Asset '${platform}' not found (given " + ${JSON.stringify(
-        assets.map((a) => a.name),
-      )})`,
-    );
-  }
-
-  vscode.workspace.fs.createDirectory(ctx.globalStorageUri);
-  const globalStorage = path.parse(ctx.globalStorageUri.fsPath);
-  const res = await fetch(asset.browser_download_url.toString());
-  if (!res.ok) {
-    throw new Error(`couldn't download file: got status code ${res.status}`);
-  }
-
-  const totalBytes = Number(res.headers.get("content-length"));
-  console.log(`Downloading server: ${totalBytes} bytes`);
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      cancellable: false,
-      title: "Downloading...",
-    },
-    async (progress, _cancellationToken) => {
-      let readBytes = 0;
-      if (res === null || res.body === null) {
-        return;
-      }
-      res.body.on("data", (chunk: Buffer) => {
-        readBytes += chunk.length;
-        const percentage = Math.round((readBytes / totalBytes) * 100);
-        progress.report({
-          message: `${percentage}%`,
-          increment: chunk.length / totalBytes,
-        });
-        console.log(`${readBytes} / ${totalBytes}`);
-      });
-
-      await util.promisify(pipeline)(
-        res.body!,
-        zlib.createGunzip(),
-        tar.extract(path.join(globalStorage.dir, globalStorage.base)),
-      );
-    },
-  );
-
-  return path.join(globalStorage.dir, globalStorage.base, "numscript");
+function storageDir(ctx: vscode.ExtensionContext): string {
+  return ctx.globalStorageUri.fsPath;
 }
 
 async function resolveServerPath(
   ctx: vscode.ExtensionContext,
 ): Promise<string | undefined> {
-  const serverPath = vscode.workspace
-    .getConfiguration("numscript")
-    .get("server-path")!;
-
-  if (serverPath !== null && serverPath !== "") {
-    console.log("found exec path:", serverPath);
-
-    return serverPath as string;
+  const configured = configuredServerPath();
+  if (configured !== undefined) {
+    return configured;
   }
 
-  const releaseInfo = await fetchReleaseInfo();
-
-  const currentServerTimestamp = ctx.globalState.get(SERVER_TIMESTAMP);
-  console.log(
-    `stored timestamp: ${currentServerTimestamp}\nlatest timestamp: ${releaseInfo.published_at}`,
-  );
-
-  if (currentServerTimestamp === releaseInfo.published_at) {
-    const serverPath = path.join(
-      ctx.globalStorageUri.fsPath,
-      NUMSCRIPT_EXECUTABLE_NAME,
-    );
-
-    const alreadyExists = fs.existsSync(serverPath);
-
-    if (alreadyExists) {
-      return serverPath;
-    }
+  const tag = ctx.globalState.get<string>(SERVER_VERSION_KEY);
+  if (tag !== undefined && (await server.isInstalled(storageDir(ctx), tag))) {
+    return server.installedExecutable(storageDir(ctx), tag);
   }
-
-  const selection = await vscode.window.showInformationMessage(
-    "Do you want to download the language server ?",
-    "Yes",
-    "No",
-  );
-  if (selection !== "Yes") {
-    return undefined;
+  // Keeps users upgrading from 0.0.x working until the first download.
+  const legacy = server.legacyExecutable(storageDir(ctx));
+  if (await server.fileExists(legacy)) {
+    return legacy;
   }
-
-  const downloadedServerPath = await downloadServer(releaseInfo.assets, ctx);
-  console.log({ downloadedServerPath });
-
-  ctx.globalState.update(SERVER_TIMESTAMP, releaseInfo.published_at);
-  vscode.window.showInformationMessage(
-    "Numscript language server downladed succesfully",
-  );
-  return downloadedServerPath;
+  return undefined;
 }
 
-export async function activate(context: vscode.ExtensionContext) {
-  const releaseInfo = await resolveServerPath(context);
-  console.log({ releaseInfo });
-  if (releaseInfo === undefined) {
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Must run in the queue. Starts the given executable, or the configured or
+// installed one.
+async function startClient(
+  ctx: vscode.ExtensionContext,
+  executablePath?: string,
+): Promise<boolean> {
+  const command = executablePath ?? (await resolveServerPath(ctx));
+  if (command === undefined) {
+    return false;
+  }
+
+  log.info(`Starting language server: ${command}`);
+  const candidate: LanguageClient = new LanguageClient(
+    "numscript",
+    "Numscript language server",
+    // Spawned here, rather than by the client, so that a server that never
+    // finishes starting can still be terminated.
+    async () => {
+      const serverProcess = spawn(command, ["lsp"]);
+      serverProcess.on("error", (err) =>
+        log.error(`Could not run ${command}`, err),
+      );
+      serverProcesses.set(candidate, serverProcess);
+      return serverProcess;
+    },
+    {
+      documentSelector: [{ scheme: "file", language: "numscript" }],
+      // Shared with the extension logs, and not disposed by the client, so
+      // failed starts do not leave extra output channels behind.
+      outputChannel: log,
+      // The client restarts a server whose connection closes. Killing a
+      // retired client's server must not restart it behind our back.
+      errorHandler: {
+        error: (error, message, count) =>
+          defaultErrorHandler.error(error, message, count),
+        closed: () =>
+          retiredClients.has(candidate)
+            ? { action: CloseAction.DoNotRestart, handled: true }
+            : defaultErrorHandler.closed(),
+      },
+    },
+  );
+  const defaultErrorHandler = candidate.createDefaultErrorHandler();
+
+  // Tracked before it starts so that a later stop can still reach a server
+  // that answers late.
+  client = candidate;
+  try {
+    // The client reports start failures to the user itself.
+    await withTimeout(
+      candidate.start(),
+      START_TIMEOUT_MS,
+      `${command} did not answer the LSP initialize request`,
+    );
+    return true;
+  } catch (err) {
+    log.error(`Language server failed to start: ${command}`, err);
+    if (candidate.state === State.Starting) {
+      vscode.window.showErrorMessage(
+        `Numscript language server ${command} did not respond. See the Numscript output for details.`,
+      );
+    }
+    return false;
+  }
+}
+
+// Must run in the queue.
+async function stopClient(): Promise<void> {
+  const current = client;
+  client = undefined;
+  if (current === undefined) {
+    return;
+  }
+  retiredClients.add(current);
+  if (current.state === State.Starting) {
+    // Still starting, or restarting itself after a crash: start() returns
+    // the pending start, which must settle before the client can be stopped.
+    await withTimeout(current.start(), STOP_WAIT_MS, "start pending").catch(
+      () => undefined,
+    );
+  }
+  const serverProcess = serverProcesses.get(current);
+  if (current.isRunning()) {
+    try {
+      await current.stop();
+    } catch (err) {
+      log.warn("Language server did not stop cleanly", err);
+    }
+    // Like the client does for processes it spawns: give the server time to
+    // exit after the shutdown request, then force it.
+    setTimeout(() => killServer(serverProcess), PROCESS_EXIT_GRACE_MS);
+  } else {
+    if (current.state === State.Starting) {
+      log.warn("Terminating a language server that never finished starting");
+    }
+    killServer(serverProcess);
+  }
+}
+
+// SIGKILL, as the extension host may ignore SIGTERM, which children inherit.
+function killServer(serverProcess: ChildProcess | undefined): void {
+  if (
+    serverProcess !== undefined &&
+    serverProcess.exitCode === null &&
+    serverProcess.signalCode === null
+  ) {
+    serverProcess.kill("SIGKILL");
+  }
+}
+
+async function restartServer(
+  ctx: vscode.ExtensionContext,
+  options: Options,
+): Promise<void> {
+  const started = await serialized(async () => {
+    await stopClient();
+    return startClient(ctx);
+  });
+  if (started) {
+    if (options.interactive) {
+      vscode.window.showInformationMessage(
+        "Numscript language server restarted.",
+      );
+    }
+    return;
+  }
+  if (configuredServerPath() === undefined) {
+    await checkForUpdate(ctx, options);
+  }
+}
+
+// Not serialized: an unanswered prompt must not block other operations.
+async function checkForUpdate(
+  ctx: vscode.ExtensionContext,
+  { interactive }: Options,
+): Promise<void> {
+  if (configuredServerPath() !== undefined) {
+    if (interactive) {
+      vscode.window.showInformationMessage(
+        "numscript.server-path is set, so the language server is not downloaded. Clear the setting to use the latest release.",
+      );
+    }
     return;
   }
 
-  const executable: Executable = {
-    command: releaseInfo,
-    args: ["lsp"],
-  };
+  let release: server.GithubRelease;
+  try {
+    release = await server.fetchLatestRelease();
+  } catch (err) {
+    log.warn("Could not check for language server updates", err);
+    if (interactive) {
+      vscode.window.showErrorMessage(
+        `Could not check for Numscript language server updates: ${errorMessage(err)}`,
+      );
+    }
+    return;
+  }
 
-  const serverOptions: ServerOptions = {
-    run: executable,
-    debug: executable,
-  };
-
-  const client = new LanguageClient(
-    "formance-vscode",
-    "Numscript language client",
-    serverOptions,
-    clientOptions,
+  const installed = ctx.globalState.get<string>(SERVER_VERSION_KEY);
+  log.info(
+    `Installed server: ${installed ?? "none"}, latest: ${release.tag_name}`,
   );
+  if (
+    installed === release.tag_name &&
+    (await server.isInstalled(storageDir(ctx), installed))
+  ) {
+    if (interactive) {
+      vscode.window.showInformationMessage(
+        `Numscript language server ${installed} is up to date.`,
+      );
+    }
+    return;
+  }
 
-  // Copied from:
-  // https://github.com/gleam-lang/vscode-gleam/blob/1a8cac7103f85e3e4e309190bb4d43ac1483cef9/src/extension.ts#L23
-  const restartCommand = vscode.commands.registerCommand(
-    RESTART_SERVER_COMMAND,
-    async () => {
-      if (!client) {
-        vscode.window.showErrorMessage("numscript client not found");
-        return;
-      }
+  if (!interactive) {
+    const action = installed === undefined ? "Download" : "Update";
+    const message =
+      installed === undefined
+        ? `Download the Numscript language server (${release.tag_name}) for diagnostics, hover and go to definition?`
+        : `Numscript language server ${release.tag_name} is available (installed: ${installed}).`;
+    if (
+      (await vscode.window.showInformationMessage(message, action)) !== action
+    ) {
+      return;
+    }
+  }
 
-      try {
-        if (client.isRunning()) {
-          await client.restart();
-
-          vscode.window.showInformationMessage("numscript server restarted.");
-        } else {
-          await client.start();
-        }
-      } catch (err) {
-        client.error("Restarting client failed", err, "force");
-      }
-    },
-  );
-
-  client.start().catch((e) => {
-    console.error(e);
-  });
-
-  context.subscriptions.push(restartCommand);
+  await serialized(() => installServer(ctx, release));
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+// Must run in the queue.
+async function installServer(
+  ctx: vscode.ExtensionContext,
+  release: server.GithubRelease,
+): Promise<void> {
+  const tag = release.tag_name;
+  // A concurrent check, or another window sharing the global storage, may
+  // have installed this release while the prompt was open.
+  if (ctx.globalState.get(SERVER_VERSION_KEY) === tag && client?.isRunning()) {
+    return;
+  }
+
+  if (!(await server.isInstalled(storageDir(ctx), tag))) {
+    try {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Downloading Numscript language server ${tag}`,
+        },
+        async (progress) => {
+          let reported = 0;
+          await server.installRelease(
+            release,
+            storageDir(ctx),
+            (received, total) => {
+              if (total === undefined) {
+                return;
+              }
+              const percent = Math.floor((received / total) * 100);
+              if (percent > reported) {
+                progress.report({
+                  message: `${percent}%`,
+                  increment: percent - reported,
+                });
+                reported = percent;
+              }
+            },
+          );
+        },
+      );
+    } catch (err) {
+      log.error("Language server download failed", err);
+      vscode.window.showErrorMessage(
+        `Numscript language server download failed: ${errorMessage(err)}`,
+      );
+      return;
+    }
+  }
+
+  // Switch only once the new version has started, so that a release that
+  // does not run on this machine leaves the previous version in place.
+  await stopClient();
+  if (
+    !(await startClient(ctx, server.installedExecutable(storageDir(ctx), tag)))
+  ) {
+    vscode.window.showErrorMessage(
+      `Numscript language server ${tag} failed to start; keeping the previous version.`,
+    );
+    await stopClient();
+    await startClient(ctx);
+    return;
+  }
+
+  await ctx.globalState.update(SERVER_VERSION_KEY, tag);
+  await ctx.globalState.update(LEGACY_SERVER_TIMESTAMP_KEY, undefined);
+  await server.pruneOtherVersions(storageDir(ctx), tag);
+  vscode.window.showInformationMessage(
+    `Numscript language server ${tag} installed.`,
+  );
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function logFailure(err: unknown): void {
+  log.error("Unexpected error", err);
+}
+
+export async function activate(ctx: vscode.ExtensionContext): Promise<void> {
+  log = vscode.window.createOutputChannel("Numscript", { log: true });
+  ctx.subscriptions.push(
+    log,
+    vscode.commands.registerCommand("numscript.restartServer", () =>
+      restartServer(ctx, { interactive: true }),
+    ),
+    vscode.commands.registerCommand("numscript.updateServer", () =>
+      checkForUpdate(ctx, { interactive: true }),
+    ),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("numscript.server-path")) {
+        restartServer(ctx, { interactive: false }).catch(logFailure);
+      }
+    }),
+  );
+
+  await serialized(() => startClient(ctx));
+  // Check for updates in the background so activation is not blocked on the
+  // network or on the user answering the prompt.
+  checkForUpdate(ctx, { interactive: false }).catch(logFailure);
+}
+
+export function deactivate(): Promise<void> {
+  return serialized(stopClient);
+}
