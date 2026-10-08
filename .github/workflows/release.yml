@@ -1,23 +1,35 @@
 name: release
 on:
   release:
-    types: [created]
+    types: [published]
 permissions:
   contents: write
 jobs:
-  main:
+  publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: editors/vscode
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: "20"
-          cache: "yarn"
-      - run: yarn install --frozen-lockfile --prefer-offline
-      - name: Package extension
-        run: yarn package
-      - name: Publish
-        run: npx vsce publish -p ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Check the tag matches package.json
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: test "${TAG#v}" = "$(node -p 'require("./package.json").version')"
+      - run: yarn package
+      - name: Publish to the Visual Studio Marketplace
+        # --skip-duplicate lets a rerun finish after a partial publication.
+        run: yarn vsce publish --skip-duplicate --packagePath *.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+      - name: Publish to Open VSX
+        run: yarn ovsx publish --skip-duplicate --packagePath *.vsix
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+      - name: Attach the package to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload --clobber "$TAG" *.vsix
